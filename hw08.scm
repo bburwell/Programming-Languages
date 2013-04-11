@@ -58,6 +58,8 @@
                while-stmt)
     (statement ("var" (separated-list identifier ",") ";" statement)
                block-stmt)
+    (statement ("do" statement "while" expression)
+               do-while-stmt)
     
     ; (3.1) expressions
     (expression (number)     lit-expr)
@@ -228,6 +230,14 @@
       (block-stmt (ids statement)
                   (execute-statement statement
                                      (extend-env ids (map (lambda (id) 0) ids) env) ))
+      
+      (do-while-stmt (stmt exp)
+                     (let loop ()
+                       (begin
+                         (execute-statement stmt env)
+                         (if (true-value? (eval-expression exp env))
+                             (loop)
+                             '()))))
       )))
 
 ; expression evaluator
@@ -417,3 +427,6 @@
 ;(scan&parse test3.9b)
 (scan&parse&eval test3.9a)
 (scan&parse&eval test3.9b)
+
+; this will let us enter the repl immediately
+(read-eval-print)
