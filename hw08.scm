@@ -209,18 +209,17 @@
                         (execute-statement false-statement env) ))
       
       ; alternate "named" LET syntax
-      (while-statement (exp statement) (while-loop exp statement env))
+      (while-statement (exp statement)
+                       (let loop ()
+                         (if (true-value? (eval-expression exp env))
+                             (begin
+                               (execute-statement statement env)
+                               (loop) ))))
       
       (block-statement (ids statement)
                        (execute-statement statement
                                           (extend-env ids (map (lambda (id) 0) ids) env) ))
       )))
-
-(define while-loop
-  (lambda (exp stmt env)
-    (if (true-value? exp)
-        (lambda () (execute-statement stmt env) (while-loop exp stmt env))
-        (#f))))
 
 ; expression evaluator
 (define eval-expression
