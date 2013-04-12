@@ -56,7 +56,7 @@
                if-stmt)
     (statement ("while" expression "do" statement)
                while-stmt)
-    (statement ("var" (separated-list identifier ",") ";" statement)
+    (statement ("var" (separated-list identifier "=" expression ",") ";" statement)
                block-stmt)
     (statement ("do" statement "while" expression)
                do-while-stmt)
@@ -227,9 +227,10 @@
                           (loop) )
                         '() )))
       
-      (block-stmt (ids statement)
+      (block-stmt (ids exprs statement)
                   (execute-statement statement
-                                     (extend-env ids (map (lambda (id) 0) ids) env) ))
+                                     (extend-env ids (map
+                                                      (lambda (exp) (eval-expression exp env)) exprs) env) ))
       
       (do-while-stmt (stmt exp)
                      (let loop ()
@@ -410,11 +411,10 @@
                                 odd(x)=if zero?(x) then 0 else (even sub1(x))
                          in (odd 13))")
 
-(define test3.9a "var x,y; {x=3; y=4; print(+(x,y))}")
-(define test3.9b "var x,y,z; {x=3; y=4; z=0;
-                    while x do {z=+(z,y); x=sub1(x)}; print(z)}")
+(define test3.9a "var x=3,y=4; print(+(x,y))")
+;(define test3.9b "var x=3,y=4,z=0; { while x do {z=+(z,y); x=sub1(x); print(z) }")
 
-(define all-tests (list test3.5a test3.5b test3.6a test3.6b test3.9a test3.9b))
+(define all-tests (list test3.5a test3.5b test3.6a test3.6b test3.9a ));test3.9b))
 
 (scan&parse&eval test3.5a)
 (scan&parse&eval test3.5b)
@@ -426,7 +426,7 @@
 ;(scan&parse test3.9a)
 ;(scan&parse test3.9b)
 (scan&parse&eval test3.9a)
-(scan&parse&eval test3.9b)
+;(scan&parse&eval test3.9b)
 
 ; this will let us enter the repl immediately
-(read-eval-print)
+;(read-eval-print)
