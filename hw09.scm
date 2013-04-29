@@ -1,4 +1,9 @@
 #lang eopl
+
+; Ben Burwell
+; Dr. Kussmaul
+; Programming Languages
+;
 ; 4.3 INTERPRETER
 ; - this interpreter supports:
 ;   - (3.x) expressions, bindings, procedures, recursion
@@ -60,6 +65,15 @@
     (type-exp ("bool")                                              bool-type-exp)
     (type-exp (identifier)                                           tid-type-exp)
     (type-exp ("(" (separated-list type-exp "*") "->" type-exp ")") proc-type-exp)
+    
+    ; (4.3) list stuffs
+    (primitive ("cons")      cons-prim)
+    (primitive ("car")       car-prim)
+    (primitive ("cdr")       cdr-prim)
+    (primitive ("list")      list-prim)
+    (primitive ("emptylist") empty-list-prim)
+    (primitive ("null?")     null-prim)
+    
     ))
 
 ; ------------------------------------------------------------
@@ -76,7 +90,9 @@
   ; named atomic type
   (atomic-type (name symbol?))
   ; procedure type (parameter types and result type)
-  (  proc-type (arg-types (list-of type?)) (result-type type?)) )
+  (  proc-type (arg-types (list-of type?)) (result-type type?))
+  ( list-type (item-type type?) )
+  )
 
 ; primitive types
 (define  int-type (atomic-type 'int ))
@@ -172,7 +188,7 @@
   (lambda (rands tenv)
     (map (lambda (expr) (type-of-expression expr tenv)) rands) ))
 
-(define type-of-primitive
+(define type-of-primitive
   (lambda (prim)
     (cases primitive prim
       ( add-prim () (proc-type (list int-type int-type) int-type))
@@ -180,7 +196,15 @@
       (mult-prim () (proc-type (list int-type int-type) int-type))
       (incr-prim () (proc-type (list int-type)          int-type))
       (decr-prim () (proc-type (list int-type)          int-type))
-      (zero-prim () (proc-type (list int-type)         bool-type)) )))
+      (zero-prim () (proc-type (list int-type)         bool-type))
+      
+      (cons-prim       () 1)
+      (car-prim        () 1)
+      (cdr-prim        () 1)
+      (list-prim       () 1)
+      (empty-list-prim () 1)
+      (null-prim       () 1)
+      )))
 
 (define type-of-proc-expr
   (lambda (texps ids body tenv)
@@ -348,9 +372,11 @@
   (lambda (ty)
     (cases type ty
       (atomic-type (name) name)
-      (  proc-type (arg-types result-type)
+      (proc-type (arg-types result-type)
                    (append (arg-types-to-external-form arg-types) '(->)
-                           (list (type-to-external-form result-type)) )))))
+                           (list (type-to-external-form result-type)) ))
+      (list-type (item-type) 'asdf)
+                  )))
 
 (define arg-types-to-external-form
   (lambda (types)
@@ -400,7 +426,7 @@
 
       )))
 
-(define eval-program
+(define eval-program
   (lambda (prog)
     (cases program prog
       (stmt-prog (body) (eval-expression body (empty-env))) )))
@@ -426,6 +452,13 @@
       (incr-prim () (+ (car args) 1))
       (decr-prim () (- (car args) 1))
       (zero-prim () (if (zero? (car args)) 1 0))
+      
+      (cons-prim       () (cons (car args) (cadr args)))
+      (car-prim        () (car args))
+      (cdr-prim        () (cdr args))
+      (list-prim       () args)
+      (empty-list-prim () '())
+      (null-prim       () ((if (null? (args)) 1 0)))
       )))
 
 ; ------------------------------------------------------------
