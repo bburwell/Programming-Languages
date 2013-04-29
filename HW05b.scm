@@ -55,7 +55,7 @@
             (eval-add-op (car ops) term (car terms))
             
             ;; else, handle multiple terms
-            'a
+            (expr-helper (eval-add-op (car ops) term (car terms)) (cdr ops) (cdr terms))
             
             ))))
 
@@ -65,10 +65,10 @@
     (cases add-op op
       
       ;; perform addition
-      (plus-op () (+ (eval-term term1) (eval-term term2)))
+      (plus-op () (if (term? term1) (+ (eval-term term1) (eval-term term2)) (+ term1 (eval-term term2))))
       
       ;; perform subtraction
-      (minus-op () (- (eval-term term1) (eval-term term2)))
+      (minus-op () (if (term? term1) (- (eval-term term1) (eval-term term2)) (- term1 (eval-term term2))))
       )))
 
 ;; evaluate a term
@@ -96,7 +96,7 @@
             (eval-mult-op (car ops) factor (car factors))
             
             ;; otherwise, handle multiple factors
-            'b
+            (term-helper (eval-mult-op (car ops) factor (car factors)) (cdr ops) (cdr factors))
             
             ))))
 
@@ -106,10 +106,10 @@
     (cases mult-op op
       
       ;; perform multiplication
-      (times-op () (* (eval-factor fac1) (eval-factor fac2)))
+      (times-op () (if (factor? fac1) (* (eval-factor fac1) (eval-factor fac2)) (* fac1 (eval-factor fac2))))
       
       ;; perform division
-      (divide-op () (/ (eval-factor fac1) (eval-factor fac2)))
+      (divide-op () (if (factor? fac1) (/ (eval-factor fac1) (eval-factor fac2)) (/ fac1 (eval-factor fac2))))
       )))
 
 ;; evaluate a factor
@@ -138,5 +138,11 @@
 (define read-eval-print
   (sllgen:make-rep-loop "> " execute-expression (sllgen:make-stream-parser scanner-spec grammar)))
 
-;; shortcut for quicker testing
-(define spe scan&parse&eval)
+(define test
+  (lambda ()
+    (display "Type something in and see if it works!!!")
+    (newline)
+    (read-eval-print)))
+
+(display "Run (test) to test program")
+(newline)
