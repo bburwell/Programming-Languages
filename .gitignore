@@ -1,0 +1,3 @@
+*.scm~
+*.rkt~
+.DS_Store
