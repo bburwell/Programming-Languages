@@ -51,6 +51,8 @@
                                   "=" expression)
                            "in" expression)
                 lettype-expr)
+    
+    (expression ("emptylist(" type-exp ")") emptylist-expr)
 
     ; (3.1) primitive operations
     (primitive ("+")      add-prim)
@@ -65,13 +67,12 @@
     (type-exp ("bool")                                              bool-type-exp)
     (type-exp (identifier)                                           tid-type-exp)
     (type-exp ("(" (separated-list type-exp "*") "->" type-exp ")") proc-type-exp)
+    (type-exp ("listof" type-exp)                                 listof-type-exp)
     
-    ; (4.3) list stuffs
     (primitive ("cons")      cons-prim)
     (primitive ("car")       car-prim)
     (primitive ("cdr")       cdr-prim)
     (primitive ("list")      list-prim)
-    (primitive ("emptylist") empty-list-prim)
     (primitive ("null?")     null-prim)
     
     ))
@@ -112,7 +113,11 @@
       (proc-type-exp (arg-texps result-texp)
                      (proc-type
                       (expand-type-expressions    arg-texps tenv)
-                      (expand-type-expression  result-texp  tenv) )) )))
+                      (expand-type-expression  result-texp  tenv) ))
+      
+      (listof-type-exp (type) (list-type type))
+      
+      )))
 
 (define expand-type-expressions
   (lambda (texps tenv)
@@ -181,6 +186,9 @@
                      (type-of-lettype-expr
                       type-name texp
                       result-texps proc-names texpss idss bodies body tenv))
+      
+      (emptylist-expr (type-name) (list-type type-name))
+      
       )))
 
 ; get list of types for list of expressions (typically operands)
@@ -202,7 +210,6 @@
       (car-prim        () 1)
       (cdr-prim        () 1)
       (list-prim       () 1)
-      (empty-list-prim () 1)
       (null-prim       () 1)
       )))
 
@@ -423,7 +430,9 @@
                                 idss bodies lettype-body)
                      (eval-expression lettype-body
                                       (extend-env-recursively proc-names idss bodies env)))
-
+      
+      (emptylist-expr (type) '())
+      
       )))
 
 (define eval-program
@@ -454,11 +463,10 @@
       (zero-prim () (if (zero? (car args)) 1 0))
       
       (cons-prim       () (cons (car args) (cadr args)))
-      (car-prim        () (car args))
-      (cdr-prim        () (cdr args))
+      (car-prim        () (caar args))
+      (cdr-prim        () (cdar args))
       (list-prim       () args)
-      (empty-list-prim () '())
-      (null-prim       () ((if (null? (args)) 1 0)))
+      (null-prim       () (if (null? (car args)) 1 0))
       )))
 
 ; ------------------------------------------------------------
@@ -619,3 +627,6 @@
   in let ff1 = (extend-ff 1 11 (extend-ff 2 22 (zero-ff)))
     in (apply-ff ff1 2)")
 (type&run test-4.3b)
+
+(define repl read-eval-print)
+(repl)
