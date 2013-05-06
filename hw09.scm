@@ -53,6 +53,16 @@
                 lettype-expr)
     
     (expression ("emptylist(" type-exp ")") emptylist-expr)
+    
+    (expression ("cons(" expression "," expression ")") cons-expr)
+    
+    (expression ("car(" expression ")") car-expr)
+    
+    (expression ("cdr(" expression ")") cdr-expr)
+    
+    (expression ("list(" (separated-list expression ",") ")") list-expr)
+    
+    (expression ("null?(" expression ")") null?-expr)
 
     ; (3.1) primitive operations
     (primitive ("+")      add-prim)
@@ -63,17 +73,11 @@
     (primitive ("zero?") zero-prim)
 
     ; (4.2) types
-    (type-exp ("int")                                                int-type-exp)
-    (type-exp ("bool")                                              bool-type-exp)
-    (type-exp (identifier)                                           tid-type-exp)
-    (type-exp ("(" (separated-list type-exp "*") "->" type-exp ")") proc-type-exp)
-    (type-exp ("listof" type-exp)                                 listof-type-exp)
-    
-    (primitive ("cons")      cons-prim)
-    (primitive ("car")       car-prim)
-    (primitive ("cdr")       cdr-prim)
-    (primitive ("list")      list-prim)
-    (primitive ("null?")     null-prim)
+    (type-exp ("int")                                                  int-type-exp)
+    (type-exp ("bool")                                                bool-type-exp)
+    (type-exp (identifier)                                             tid-type-exp)
+    (type-exp ("(" (separated-list type-exp "*") "->" type-exp ")")   proc-type-exp)
+    (type-exp ("listof" type-exp)                                   listof-type-exp)
     
     ))
 
@@ -115,7 +119,7 @@
                       (expand-type-expressions    arg-texps tenv)
                       (expand-type-expression  result-texp  tenv) ))
       
-      (listof-type-exp (type) (list-type type))
+      (listof-type-exp (type) (list-type (expand-type-expression type)))
       
       )))
 
@@ -187,9 +191,40 @@
                       type-name texp
                       result-texps proc-names texpss idss bodies body tenv))
       
-      (emptylist-expr (type-name) (list-type type-name))
+      (emptylist-expr (type-name) (list-type (expand-type-expression type-name tenv)))
+      
+      (cons-expr (lst1 lst2) (cases type (type-of-expression lst2 tenv)
+                               (list-type (item) (if (equal? item (type-of-expression lst1 tenv))
+                                                     (type-of-expression lst2 tenv)
+                                                     (eopl:error "cons'd the wrong types!")))
+                               (else (eopl:error "NOT a LIST!"))))
+      
+      (car-expr (lst) (cases type (type-of-expression lst tenv)
+                        (list-type (item) item)
+                        (else (eopl:error "bad no stop go away"))
+                        ))
+      
+      (cdr-expr (lst) (cases type (type-of-expression lst tenv)
+                        (list-type (thing) (type-of-expression lst tenv))
+                        (else (eopl:error "BLARGH YOU used not a LIST for CDR!!!"))
+                        ))
+      
+      (list-expr (args) (list-type (list-type-helper args tenv)))
+      
+      (null?-expr (lst) bool-type)
+      
       
       )))
+
+(define list-type-helper
+  (lambda (args tenv)
+    (if (equal? (length args) 1)
+        (type-of-expression (car args) tenv)
+        (if (equal?
+             (type-of-expression (car args) tenv)
+             (type-of-expression (cadr args) tenv))
+            (list-type-helper (cdr args) tenv)
+            (eopl:error "Y U NO USE SAYM TYPEZ?")))))
 
 ; get list of types for list of expressions (typically operands)
 (define types-of-expressions
@@ -205,12 +240,6 @@
       (incr-prim () (proc-type (list int-type)          int-type))
       (decr-prim () (proc-type (list int-type)          int-type))
       (zero-prim () (proc-type (list int-type)         bool-type))
-      
-      (cons-prim       () 1)
-      (car-prim        () 1)
-      (cdr-prim        () 1)
-      (list-prim       () 1)
-      (null-prim       () 1)
       )))
 
 (define type-of-proc-expr
@@ -382,7 +411,7 @@
       (proc-type (arg-types result-type)
                    (append (arg-types-to-external-form arg-types) '(->)
                            (list (type-to-external-form result-type)) ))
-      (list-type (item-type) 'asdf)
+      (list-type (item-type) (list 'list-of (type-to-external-form item-type)))
                   )))
 
 (define arg-types-to-external-form
@@ -433,6 +462,16 @@
       
       (emptylist-expr (type) '())
       
+      (cons-expr (lst1 lst2) (cons (eval-expression lst1 env) (eval-expression lst2 env)))
+      
+      (car-expr (lst) (car (eval-expression lst env)))
+      
+      (cdr-expr (lst) (cdr (eval-expression lst env)))
+      
+      (list-expr (args) (eval-rands args env))
+      
+      (null?-expr (lst) (null? (eval-expression lst env)))
+      
       )))
 
 (define eval-program
@@ -461,12 +500,6 @@
       (incr-prim () (+ (car args) 1))
       (decr-prim () (- (car args) 1))
       (zero-prim () (if (zero? (car args)) 1 0))
-      
-      (cons-prim       () (cons (car args) (cadr args)))
-      (car-prim        () (caar args))
-      (cdr-prim        () (cdar args))
-      (list-prim       () args)
-      (null-prim       () (if (null? (car args)) 1 0))
       )))
 
 ; ------------------------------------------------------------
@@ -628,5 +661,11 @@
     in (apply-ff ff1 2)")
 (type&run test-4.3b)
 
-(define repl read-eval-print)
-(repl)
+; 4.9 Tests
+(type&run "emptylist(int)")
+(type&run "list(1,2,3,4,5)")
+(type&run "null?(emptylist(int))")
+(type&run "cons(1,cdr(list(2,3,4)))")
+(type&run "list(list(2,3),list(4,5,6))")
+(type&run "car(car(cdr(list(list(2,3),list(4,5,6)))))")
+(type&run "list(list(2,3),4)")
